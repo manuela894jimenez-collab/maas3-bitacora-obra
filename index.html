@@ -460,11 +460,25 @@ const STORAGE = (typeof window !== "undefined" && window.storage) ? window.stora
           const res = await STORAGE.get("obra-data");
     if(res && res.value){
       DATA = JSON.parse(res.value);
-      return;
+            migrateData();
+            await saveData();
+            return;
     }
   }catch(e){ /* not found */ }
   DATA = seedData();
   await saveData();
+    function migrateData(){
+        try{
+              const seed = seedData();
+              (DATA.projects||[]).forEach(p=>{
+                      const sp = seed.projects.find(x=>x.id===p.id);
+                      if(sp){
+                                if(!p.gantt && sp.gantt) p.gantt = sp.gantt;
+                                if(!p.stages && sp.stages) p.stages = sp.stages;
+                      }
+              });
+        }catch(e){ console.error("Migration error:", e); }
+    }
 }
 async function saveData(){
   try{
