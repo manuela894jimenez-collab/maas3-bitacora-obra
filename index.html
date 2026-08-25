@@ -349,9 +349,13 @@ const ui = {
   selectedTaskIds: new Set()
 };
 
-async function loadData(){
+const STORAGE = (typeof window !== "undefined" && window.storage) ? window.storage : {
+    async get(key){ const v = localStorage.getItem("obra:"+key); return v===null ? null : {key, value:v}; },
+    async set(key, value){ localStorage.setItem("obra:"+key, value); return {key, value}; }
+};
+  async function loadData(){
   try{
-    const res = await window.storage.get("obra-data", false);
+          const res = await STORAGE.get("obra-data");
     if(res && res.value){
       DATA = JSON.parse(res.value);
       return;
@@ -362,7 +366,7 @@ async function loadData(){
 }
 async function saveData(){
   try{
-    await window.storage.set("obra-data", JSON.stringify(DATA), false);
+        await STORAGE.set("obra-data", JSON.stringify(DATA));
   }catch(e){ console.error("Error guardando", e); }
 }
 
