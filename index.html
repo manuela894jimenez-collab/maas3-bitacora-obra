@@ -6,6 +6,7 @@
 <title>MAAS3 · Bitácora de obra</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg: #F7F7F4;
@@ -269,6 +270,54 @@
 
   .note{font-size:11.5px;color:var(--ink-soft);margin-top:16px;padding-top:14px;border-top:1px dashed var(--line-strong);}
 
+  /* cronograma / stages */
+  .stage-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .stage-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;}
+  .stage-name{font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;}
+  .stage-dates{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .stage-variation{font-size:11.5px;color:var(--amber);font-weight:700;margin-top:3px;}
+  .stage-track{position:relative;height:8px;background:var(--line);border-radius:4px;margin-top:12px;}
+  .stage-bar{position:absolute;top:0;height:100%;border-radius:4px;}
+  .stage-bar.planned{background:var(--line-strong);}
+  .stage-bar.current{background:var(--lime);height:4px;top:2px;box-shadow:0 0 0 1px var(--paper);}
+  .stage-notes{font-size:12.5px;color:var(--ink-soft);margin-top:8px;font-style:italic;}
+
+  /* gantt / excel-style cronograma */
+  .gantt-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);}
+  table.gantt{border-collapse:collapse;font-size:11.5px;min-width:100%;}
+  table.gantt th{
+    background:#2E2E2E;color:#F2F2F0;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    text-transform:uppercase;letter-spacing:.3px;padding:6px 4px;text-align:center;white-space:nowrap;
+    border:1px solid #444;font-size:10.5px;
+  }
+  table.gantt th.gantt-corner{background:#2E2E2E;}
+  table.gantt td.gantt-fixed, table.gantt th.gantt-fixed{
+    position:sticky;left:0;background:var(--paper);color:var(--ink);text-align:left;
+    text-transform:none;font-family:'Inter',sans-serif;white-space:nowrap;z-index:2;
+  }
+  table.gantt th.gantt-fixed{background:#2E2E2E;color:#F2F2F0;z-index:3;}
+  table.gantt td.gantt-chapter{
+    font-weight:700;font-size:11px;text-transform:uppercase;color:var(--ink-soft);
+    background:var(--bg);border-right:1px solid var(--line-strong);left:0;min-width:130px;max-width:150px;white-space:normal;
+  }
+  table.gantt td.gantt-activity{
+    left:150px;min-width:190px;max-width:220px;white-space:normal;border-right:1px solid var(--line);
+    padding:5px 8px;font-size:11.5px;
+  }
+  table.gantt th.gantt-fixed:nth-child(1){min-width:130px;max-width:150px;}
+  table.gantt th.gantt-fixed:nth-child(2){left:150px;min-width:190px;max-width:220px;}
+  table.gantt td, table.gantt th{border:1px solid var(--line);}
+  td.gantt-cell{width:26px;min-width:26px;padding:0;height:24px;background:var(--paper);}
+  td.gantt-adjudicacion{background:#4F7CAC;}
+  td.gantt-ejecucion{background:var(--lime);}
+  td.gantt-revisar{background:#F2C94C;}
+  .gantt-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-soft);}
+  .gantt-legend-item{display:flex;align-items:center;gap:6px;}
+  .gantt-legend-item i{width:14px;height:14px;border-radius:2px;display:inline-block;}
+  .gantt-legend-item i.gantt-adjudicacion{background:#4F7CAC;}
+  .gantt-legend-item i.gantt-ejecucion{background:var(--lime);}
+  .gantt-legend-item i.gantt-revisar{background:#F2C94C;}
+
   @media (max-width: 860px){
     .sidebar{display:none;}
     .topbar{
@@ -308,9 +357,61 @@ function seedData(){
     {id:"u3", name:"Mateo", role:"Auxiliar"}
   ];
   const projects = [
-    {id:"p1", name:"Casa Retiro", status:"Activo", client:"Familia Retiro", location:"El Retiro, Ant.", start:"2026-05-15", due:"2026-12-20"},
-    {id:"p2", name:"Provenza", status:"Activo", client:"Inversiones Provenza", location:"Medellín", start:"2026-06-01", due:"2026-11-30"},
-    {id:"p3", name:"Edificio 34", status:"Activo", client:"Constructora 34", location:"Envigado", start:"2026-03-01", due:"2027-02-01"}
+    {id:"p1", name:"Casa Retiro", status:"Activo", client:"Familia Retiro", location:"El Retiro, Ant.", start:"2026-05-15", due:"2026-12-20", stages:[
+      {id:"st1", name:"Cimentación", plannedStart:"2026-05-15", plannedEnd:"2026-06-15", currentStart:"2026-05-15", currentEnd:"2026-06-15", status:"terminada", notes:""},
+      {id:"st2", name:"Estructura", plannedStart:"2026-06-16", plannedEnd:"2026-08-30", currentStart:"2026-06-16", currentEnd:"2026-09-08", status:"ejecucion", notes:"Retraso por lluvias."},
+      {id:"st3", name:"Instalaciones", plannedStart:"2026-09-01", plannedEnd:"2026-09-30", currentStart:"2026-09-01", currentEnd:"2026-09-30", status:"pendiente", notes:""},
+      {id:"st4", name:"Acabados", plannedStart:"2026-10-01", plannedEnd:"2026-11-15", currentStart:"2026-10-01", currentEnd:"2026-11-15", status:"pendiente", notes:""},
+      {id:"st5", name:"Entrega", plannedStart:"2026-12-20", plannedEnd:"2026-12-20", currentStart:"2026-12-20", currentEnd:"2026-12-20", status:"pendiente", notes:""}
+    ], gantt:{
+      totalWeeks:14, monthWeeks:[4,4,4,2],
+      chapters:[
+        {name:"PRELIMINARES", activities:[
+          {name:"Actividades preliminares", segments:[{type:"ejecucion",start:1,end:1}]},
+          {name:"Detallado y aseo para entrega", segments:[{type:"ejecucion",start:14,end:14}]}
+        ]},
+        {name:"OBRA GRIS", activities:[
+          {name:"Muros nuevos en mampostería", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]},
+          {name:"Muros/rebancos en concreto", segments:[{type:"adjudicacion",start:1,end:2},{type:"ejecucion",start:3,end:5}]},
+          {name:"Revoque y resanes", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:5}]},
+          {name:"Impermeabilizaciones", segments:[{type:"adjudicacion",start:3,end:3},{type:"ejecucion",start:4,end:6}]}
+        ]},
+        {name:"REDES Y APARATOS", activities:[
+          {name:"Redes eléctricas, domótica, iluminación", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:6}]},
+          {name:"Redes hidrosanitarias y gas", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:5}]},
+          {name:"Aparatos hidrosanitarios y gas", segments:[{type:"ejecucion",start:8,end:11}]}
+        ]},
+        {name:"PISOS, ZÓCALOS Y ENCHAPES", activities:[
+          {name:"Pisos en piedra natural", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:6}]},
+          {name:"Enchapes en cerámica baños", segments:[{type:"adjudicacion",start:3,end:3},{type:"ejecucion",start:4,end:5}]},
+          {name:"Piso en madera estructurada", segments:[{type:"ejecucion",start:9,end:10}]}
+        ]},
+        {name:"MESONES Y LAVAMANOS EN PIEDRA", activities:[
+          {name:"Base y mesón en piedra para isla", segments:[{type:"adjudicacion",start:4,end:4},{type:"revisar",start:5,end:5}]},
+          {name:"Lavamanos en piedra para baños", segments:[{type:"adjudicacion",start:4,end:4},{type:"ejecucion",start:9,end:10}]}
+        ]},
+        {name:"CARPINTERÍA METÁLICA", activities:[
+          {name:"Vitralblock baño social", segments:[{type:"revisar",start:5,end:6}]},
+          {name:"Suministro e instalación de ventanería", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]}
+        ]},
+        {name:"INSTALACIONES ESPECIALES", activities:[
+          {name:"Instalación Jacuzzi", segments:[{type:"revisar",start:7,end:9}]},
+          {name:"Red aires acondicionados", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]},
+          {name:"Aparatos aires acondicionados", segments:[{type:"ejecucion",start:12,end:12}]}
+        ]}
+      ]
+    }},
+    {id:"p2", name:"Provenza", status:"Activo", client:"Inversiones Provenza", location:"Medellín", start:"2026-06-01", due:"2026-11-30", stages:[
+      {id:"st6", name:"Demolición y adecuación", plannedStart:"2026-06-01", plannedEnd:"2026-06-20", currentStart:"2026-06-01", currentEnd:"2026-06-20", status:"terminada", notes:""},
+      {id:"st7", name:"Obra civil", plannedStart:"2026-06-21", plannedEnd:"2026-09-30", currentStart:"2026-06-21", currentEnd:"2026-09-30", status:"ejecucion", notes:""},
+      {id:"st8", name:"Acabados y entrega", plannedStart:"2026-10-01", plannedEnd:"2026-11-30", currentStart:"2026-10-01", currentEnd:"2026-11-30", status:"pendiente", notes:""}
+    ]},
+    {id:"p3", name:"Edificio 34", status:"Activo", client:"Constructora 34", location:"Envigado", start:"2026-03-01", due:"2027-02-01", stages:[
+      {id:"st9", name:"Cimentación y estructura", plannedStart:"2026-03-01", plannedEnd:"2026-08-15", currentStart:"2026-03-01", currentEnd:"2026-08-15", status:"ejecucion", notes:""},
+      {id:"st10", name:"Instalaciones", plannedStart:"2026-08-16", plannedEnd:"2026-10-31", currentStart:"2026-08-16", currentEnd:"2026-10-31", status:"pendiente", notes:""},
+      {id:"st11", name:"Acabados", plannedStart:"2026-11-01", plannedEnd:"2027-01-15", currentStart:"2026-11-01", currentEnd:"2027-01-15", status:"pendiente", notes:""},
+      {id:"st12", name:"Entrega", plannedStart:"2027-02-01", plannedEnd:"2027-02-01", currentStart:"2027-02-01", currentEnd:"2027-02-01", status:"pendiente", notes:""}
+    ]}
   ];
   let n = 1;
   const id = () => "t" + (n++);
@@ -338,6 +439,7 @@ function seedData(){
 
 /* ============ STATE ============ */
 let DATA = null;
+let excelImportProjectId = null;
 const ui = {
   view: "home",
   projectId: null,
@@ -456,6 +558,7 @@ function render(){
     </div>
     <button class="fab" id="fabBtn">+</button>
     ${ui.fabOpen? renderFabMenu() : ""}
+    <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display:none">
   `;
   renderModal();
   attachHandlers();
@@ -684,6 +787,190 @@ function renderProjects(){
   `;
 }
 
+async function handleExcelImport(ev){
+  const file = ev.target.files && ev.target.files[0];
+  const targetProjectId = excelImportProjectId;
+  ev.target.value = "";
+  if(!file || !targetProjectId) return;
+  if(typeof XLSX === "undefined"){ alert("No se pudo cargar el lector de Excel. Revisa tu conexión e intenta de nuevo."); return; }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array", cellStyles:true});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    if(!sheet || !sheet["!ref"]) throw new Error("hoja vacía");
+    const range = XLSX.utils.decode_range(sheet["!ref"]);
+    const cellAt = (r,c) => sheet[XLSX.utils.encode_cell({r,c})];
+
+    // Find the week-header row (the row containing "S-1", "S-2", ...)
+    let weekRow = -1, weekCols = [];
+    for(let r=range.s.r; r<=range.e.r; r++){
+      const matches = [];
+      for(let c=range.s.c; c<=range.e.c; c++){
+        const cell = cellAt(r,c);
+        if(cell && typeof cell.v === "string" && /^S-?\d+$/i.test(cell.v.trim())) matches.push(c);
+      }
+      if(matches.length >= 3){ weekRow = r; weekCols = matches; break; }
+    }
+    if(weekRow === -1) throw new Error("no se detectó la fila de semanas (S-1, S-2, ...)");
+    const totalWeeks = weekCols.length;
+    const weekStartCol = weekCols[0];
+
+    // Month grouping from the row above, using merged cell spans when available
+    const monthRow = weekRow - 1;
+    let monthWeeks = [];
+    if(monthRow >= range.s.r){
+      const merges = sheet["!merges"] || [];
+      let c = weekStartCol;
+      const lastWeekCol = weekCols[weekCols.length-1];
+      while(c <= lastWeekCol){
+        const merge = merges.find(m => m.s.r===monthRow && m.s.c===c && m.e.r===monthRow);
+        if(merge){ monthWeeks.push(merge.e.c - merge.s.c + 1); c = merge.e.c + 1; }
+        else { monthWeeks.push(1); c++; }
+      }
+    }
+    if(!monthWeeks.length || monthWeeks.reduce((a,b)=>a+b,0) !== totalWeeks){
+      monthWeeks = []; let left = totalWeeks;
+      while(left > 0){ const take = Math.min(4,left); monthWeeks.push(take); left -= take; }
+    }
+
+    // Classify a cell's fill color into our three segment types
+    function classify(cell){
+      if(!cell || !cell.s || !cell.s.fgColor) return null;
+      let rgbHex = cell.s.fgColor.rgb;
+      if(!rgbHex) return null;
+      const hex = rgbHex.length === 8 ? rgbHex.slice(2) : rgbHex;
+      const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+      if(isNaN(r) || isNaN(g) || isNaN(b)) return null;
+      if(r>235 && g>235 && b>235) return null;
+      const targets = {adjudicacion:[79,124,172], ejecucion:[190,220,20], revisar:[242,201,76]};
+      let best = null, bestDist = Infinity;
+      for(const k in targets){
+        const t = targets[k];
+        const d = (r-t[0])**2 + (g-t[1])**2 + (b-t[2])**2;
+        if(d < bestDist){ bestDist = d; best = k; }
+      }
+      return best;
+    }
+
+    // Walk data rows below the week header, grouping by chapter (column A, merged/blank-filled-down) and activity (column B)
+    const chapters = [];
+    let currentChapter = null, lastChapterName = "", emptyStreak = 0;
+    for(let r=weekRow+1; r<=range.e.r; r++){
+      const chapCell = cellAt(r,0), descCell = cellAt(r,1);
+      const chapVal = (chapCell && chapCell.v!=null) ? String(chapCell.v).trim() : "";
+      const descVal = (descCell && descCell.v!=null) ? String(descCell.v).trim() : "";
+      if(!chapVal && !descVal){ emptyStreak++; if(emptyStreak>=2) break; continue; }
+      emptyStreak = 0;
+      if(chapVal) lastChapterName = chapVal;
+      if(!descVal) continue;
+      let segments = [], curType = null, curStart = null;
+      for(let i=0;i<weekCols.length;i++){
+        const type = classify(cellAt(r, weekCols[i]));
+        const weekNum = i+1;
+        if(type !== curType){
+          if(curType) segments.push({type:curType, start:curStart, end:weekNum-1});
+          curType = type; curStart = weekNum;
+        }
+      }
+      if(curType) segments.push({type:curType, start:curStart, end:weekCols.length});
+      if(!segments.length) continue;
+      if(!currentChapter || currentChapter.name !== (lastChapterName || "General")){
+        currentChapter = {name: lastChapterName || "General", activities:[]};
+        chapters.push(currentChapter);
+      }
+      currentChapter.activities.push({name:descVal, segments});
+    }
+    if(!chapters.length) throw new Error("no se encontraron actividades con celdas de color reconocibles");
+
+    const gantt = {totalWeeks, monthWeeks, chapters};
+    await mutate(()=>{
+      const proj = byId(DATA.projects, targetProjectId);
+      if(proj) proj.gantt = gantt;
+    });
+  }catch(err){
+    console.error("Excel import error:", err);
+    alert("No pude leer el cronograma de ese archivo. Revisa que tenga una fila con encabezados 'S-1, S-2, ...' por semana y celdas coloreadas para cada actividad.");
+  }
+}
+function shiftDate(iso, days){
+  const d = new Date(iso+"T00:00:00");
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function renderGanttTable(p){
+  const g = p.gantt;
+  const monthLabels = g.monthWeeks.map((n,i)=>({label:"MES "+(i+1), span:n}));
+  let weekNum = 1;
+  const weekHeaders = [];
+  for(let i=0;i<g.totalWeeks;i++){ weekHeaders.push(weekNum++); }
+  function cellFor(activity, week){
+    const seg = activity.segments.find(s=>week>=s.start && week<=s.end);
+    if(!seg) return `<td class="gantt-cell"></td>`;
+    return `<td class="gantt-cell gantt-${seg.type}"></td>`;
+  }
+  let bodyRows = "";
+  g.chapters.forEach(ch=>{
+    ch.activities.forEach((act,i)=>{
+      bodyRows += `<tr>`;
+      if(i===0) bodyRows += `<td class="gantt-fixed gantt-chapter" rowspan="${ch.activities.length}">${esc(ch.name)}</td>`;
+      bodyRows += `<td class="gantt-fixed gantt-activity">${esc(act.name)}</td>`;
+      weekHeaders.forEach(w=> bodyRows += cellFor(act, w));
+      bodyRows += `</tr>`;
+    });
+  });
+  return `
+  <div class="gantt-scroll">
+    <table class="gantt">
+      <thead>
+        <tr>
+          <th class="gantt-fixed gantt-corner" colspan="2"></th>
+          ${monthLabels.map(m=>`<th colspan="${m.span}">${m.label}</th>`).join("")}
+        </tr>
+        <tr>
+          <th class="gantt-fixed">CAPÍTULO</th>
+          <th class="gantt-fixed">DESCRIPCIÓN ACTIVIDAD</th>
+          ${weekHeaders.map(w=>`<th class="gantt-week">S-${w}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+  </div>
+  <div class="gantt-legend">
+    <span class="gantt-legend-item"><i class="gantt-adjudicacion"></i> Período de adjudicación</span>
+    <span class="gantt-legend-item"><i class="gantt-ejecucion"></i> Período de ejecución</span>
+    <span class="gantt-legend-item"><i class="gantt-revisar"></i> Por revisar inicio</span>
+  </div>`;
+}
+function stageCard(st, p){
+  const totalMs = new Date(p.due+"T00:00:00") - new Date(p.start+"T00:00:00");
+  const pct = (d)=>{ if(!d || totalMs<=0) return 0; const v=(new Date(d+"T00:00:00")-new Date(p.start+"T00:00:00"))/totalMs*100; return Math.max(0,Math.min(100,v)); };
+  const planLeft = pct(st.plannedStart), planRight = pct(st.plannedEnd);
+  const curStart = st.currentStart||st.plannedStart, curEnd = st.currentEnd||st.plannedEnd;
+  const curLeft = pct(curStart), curRight = pct(curEnd);
+  const moved = (curStart!==st.plannedStart || curEnd!==st.plannedEnd);
+  const statusLabel = st.status==="terminada"?"Terminada":st.status==="ejecucion"?"En ejecución":"Pendiente";
+  const badgeStyle = st.status==="terminada"?"background:var(--moss-soft);color:var(--moss);":st.status==="ejecucion"?"background:var(--amber-soft);color:var(--amber);":"background:var(--line);color:var(--ink-soft);";
+  let variation = "";
+  if(moved && st.plannedEnd && curEnd){
+    const diffDays = Math.round((new Date(curEnd+"T00:00:00") - new Date(st.plannedEnd+"T00:00:00"))/86400000);
+    variation = `<div class="stage-variation">Variación: ${diffDays>0?'+':''}${diffDays} día${Math.abs(diffDays)===1?'':'s'}</div>`;
+  }
+  return `
+  <div class="stage-card">
+    <div class="stage-top">
+      <div class="stage-name">${esc(st.name)}</div>
+      <span class="stamp" style="${badgeStyle}">${statusLabel}</span>
+    </div>
+    <div class="stage-dates">Planificado: ${fmtDate(st.plannedStart)||'—'} — ${fmtDate(st.plannedEnd)||'—'}${moved?` · Actual: ${fmtDate(curStart)||'—'} — ${fmtDate(curEnd)||'—'}`:""}</div>
+    ${variation}
+    <div class="stage-track">
+      <div class="stage-bar planned" style="left:${planLeft}%;width:${Math.max(1,planRight-planLeft)}%;"></div>
+      ${moved? `<div class="stage-bar current" style="left:${curLeft}%;width:${Math.max(1,curRight-curLeft)}%;"></div>` : ""}
+    </div>
+    ${st.notes? `<div class="stage-notes">${esc(st.notes)}</div>` : ""}
+    <button class="btn ghost small" data-move-stage="${st.id}" data-project="${p.id}" style="margin-top:10px;">Mover etapa</button>
+  </div>`;
+}
 function renderProjectDetail(){
   const p = byId(DATA.projects, ui.projectId);
   if(!p) return `<div class="empty">Proyecto no encontrado.</div>`;
@@ -721,6 +1008,19 @@ function renderProjectDetail(){
   } else if(ui.projectTab==="tareas"){
     content = pt.length? pt.map(t=>taskTicket(t)).join("") : `<div class="empty">No hay tareas en este proyecto.</div>`;
     content += `<div style="margin-top:14px;"><button class="btn secondary" data-newtask-project="${p.id}">+ Nueva tarea en este proyecto</button></div>`;
+  } else if(ui.projectTab==="cronograma"){
+    const importBar = `
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn secondary" data-import-excel="${p.id}">⭱ ${p.gantt?'Reimportar':'Importar'} desde Excel</button>
+        <span style="font-size:11.5px;color:var(--ink-soft);">Sube tu archivo .xlsx del cronograma semanal (capítulo, actividad, semanas coloreadas)</span>
+      </div>`;
+    if(p.gantt){
+      content = importBar + renderGanttTable(p);
+    } else {
+      const stages = p.stages || [];
+      content = importBar + (stages.length? stages.map(st=>stageCard(st,p)).join("") : `<div class="empty">Sin cronograma todavía. Impórtalo desde Excel o crea una etapa manual.</div>`)
+        + `<div style="margin-top:14px;"><button class="btn ghost small" data-newstage-project="${p.id}">+ Nueva etapa manual</button></div>`;
+    }
   } else {
     content = `<div class="empty">Esta sección (${tabs.find(t=>t.v===ui.projectTab).l}) queda para la fase 2 del producto.</div>`;
   }
@@ -918,6 +1218,61 @@ function renderModal(){
     </div>`;
   }
 
+  else if(type==="newStage"){
+    html = `
+    <div class="overlay" id="overlayEl">
+      <div class="modal">
+        <div class="modal-head"><div class="modal-title">Nueva etapa de cronograma</div><button class="modal-close" data-close>✕</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Nombre de la etapa</label><input class="big" type="text" id="s-name" placeholder="Ej. Instalaciones"></div>
+          <div class="field-row">
+            <div class="field"><label>Inicio planificado</label><input type="date" id="s-start"></div>
+            <div class="field"><label>Fin planificado</label><input type="date" id="s-end"></div>
+          </div>
+          <div class="field"><label>Estado</label><select id="s-status">
+            <option value="pendiente">Pendiente</option>
+            <option value="ejecucion">En ejecución</option>
+            <option value="terminada">Terminada</option>
+          </select></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancelar</button>
+          <button class="btn" data-save-stage="${payload.projectId}">Crear etapa</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  else if(type==="moveStage"){
+    const stP = byId(DATA.projects, payload.projectId);
+    const st = (stP.stages||[]).find(s=>s.id===payload.stageId);
+    html = `
+    <div class="overlay" id="overlayEl">
+      <div class="modal">
+        <div class="modal-head"><div class="modal-title">Mover etapa</div><button class="modal-close" data-close>✕</button></div>
+        <div class="modal-body">
+          <div style="font-weight:700;margin-bottom:10px;">${esc(st.name)}</div>
+          <div class="detail-row"><span class="k">Planificado originalmente</span><span class="v">${fmtDate(st.plannedStart)} — ${fmtDate(st.plannedEnd)}</span></div>
+          <div class="field-row" style="margin-top:14px;">
+            <div class="field"><label>Nueva fecha inicio</label><input type="date" id="m-start" value="${st.currentStart||st.plannedStart||''}"></div>
+            <div class="field"><label>Nueva fecha fin</label><input type="date" id="m-end" value="${st.currentEnd||st.plannedEnd||''}"></div>
+          </div>
+          <div class="field"><label>Estado</label><select id="m-status">
+            <option value="pendiente" ${st.status==='pendiente'?'selected':''}>Pendiente</option>
+            <option value="ejecucion" ${st.status==='ejecucion'?'selected':''}>En ejecución</option>
+            <option value="terminada" ${st.status==='terminada'?'selected':''}>Terminada</option>
+          </select></div>
+          <label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:13px;line-height:1.4;">
+            <input type="checkbox" id="m-cascade" style="margin-top:3px;flex-shrink:0;">
+            <span>¿Desplazar también las etapas posteriores la misma cantidad de días? (las tareas del proyecto nunca se modifican automáticamente)</span>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancelar</button>
+          <button class="btn" data-confirm-move-stage="1" data-project="${payload.projectId}" data-stage="${payload.stageId}">Mover etapa</button>
+        </div>
+      </div>
+    </div>`;
+  }
   else if(type==="taskDetail"){
     const t = taskById(payload.taskId);
     if(!t){ root.innerHTML=""; return; }
@@ -1009,6 +1364,21 @@ function attachHandlers(){
   app.querySelectorAll("[data-newtask-project]").forEach(el=>{
     el.addEventListener("click", ()=> openModal("newTask", {projectId: el.getAttribute("data-newtask-project")}));
   });
+  app.querySelectorAll("[data-newstage-project]").forEach(el=>{
+    el.addEventListener("click", ()=> openModal("newStage", {projectId: el.getAttribute("data-newstage-project")}));
+  });
+  app.querySelectorAll("[data-move-stage]").forEach(el=>{
+    el.addEventListener("click", ()=> openModal("moveStage", {projectId: el.getAttribute("data-project"), stageId: el.getAttribute("data-move-stage")}));
+  });
+  app.querySelectorAll("[data-import-excel]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      excelImportProjectId = el.getAttribute("data-import-excel");
+      const inp = document.getElementById("excelFileInput");
+      if(inp) inp.click();
+    });
+  });
+  const excelInput = document.getElementById("excelFileInput");
+  if(excelInput) excelInput.onchange = handleExcelImport;
 
   // toggle complete inline
   app.querySelectorAll("[data-toggle-complete]").forEach(el=>{
@@ -1134,6 +1504,54 @@ function attachHandlers(){
         start: document.getElementById("p-start").value || TODAY,
         due: document.getElementById("p-due").value || null
       });
+    });
+    closeModal();
+  });
+
+  // new stage
+  const saveStage = modalRoot.querySelector("[data-save-stage]");
+  if(saveStage) saveStage.addEventListener("click", ()=>{
+    const pid = saveStage.getAttribute("data-save-stage");
+    const name = document.getElementById("s-name").value.trim();
+    if(!name){ document.getElementById("s-name").style.borderColor="var(--rust)"; return; }
+    const start = document.getElementById("s-start").value || null;
+    const end = document.getElementById("s-end").value || null;
+    const status = document.getElementById("s-status").value;
+    mutate(()=>{
+      const proj = byId(DATA.projects, pid);
+      if(!proj.stages) proj.stages = [];
+      proj.stages.push({id:"st"+Date.now(), name, plannedStart:start, plannedEnd:end, currentStart:start, currentEnd:end, status, notes:""});
+    });
+    closeModal();
+  });
+
+  // move stage confirm
+  const confirmMoveStage = modalRoot.querySelector("[data-confirm-move-stage]");
+  if(confirmMoveStage) confirmMoveStage.addEventListener("click", ()=>{
+    const pid = confirmMoveStage.getAttribute("data-project");
+    const sid = confirmMoveStage.getAttribute("data-stage");
+    const newStart = document.getElementById("m-start").value || null;
+    const newEnd = document.getElementById("m-end").value || null;
+    const status = document.getElementById("m-status").value;
+    const cascade = document.getElementById("m-cascade").checked;
+    mutate(()=>{
+      const proj = byId(DATA.projects, pid);
+      const stages = proj.stages || [];
+      const idx = stages.findIndex(s=>s.id===sid);
+      if(idx===-1) return;
+      const st = stages[idx];
+      const oldEnd = st.currentEnd || st.plannedEnd;
+      const diffDays = (oldEnd && newEnd) ? Math.round((new Date(newEnd+"T00:00:00") - new Date(oldEnd+"T00:00:00"))/86400000) : 0;
+      st.currentStart = newStart; st.currentEnd = newEnd; st.status = status;
+      if(cascade && diffDays!==0){
+        for(let i=idx+1;i<stages.length;i++){
+          const s2 = stages[i];
+          const s2Start = s2.currentStart || s2.plannedStart;
+          const s2End = s2.currentEnd || s2.plannedEnd;
+          if(s2Start) s2.currentStart = shiftDate(s2Start, diffDays);
+          if(s2End) s2.currentEnd = shiftDate(s2End, diffDays);
+        }
+      }
     });
     closeModal();
   });
