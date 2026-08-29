@@ -74,6 +74,7 @@
 
   /* Topbar mobile */
   .topbar{display:none;}
+  .topbar-nav{display:none;}
 
   main{flex:1;min-width:0;padding:30px 34px 90px 34px;}
   .container{max-width:980px;margin:0 auto;}
@@ -341,116 +342,42 @@
 
 <script>
 /* ============ CONFIG / SEED ============ */
-const TODAY = "2026-08-24"; // Lunes
+const TODAY = new Date().toISOString().slice(0,10);
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const PRIORITIES = ["Alta","Normal","Baja"];
 const WEEKS = [
   {v:"esta", l:"Esta semana"},
   {v:"proxima", l:"Próxima semana"},
   {v:null, l:"Sin programar"}
 ];
-const ACTIVITIES = ["Presupuestos","Compras","Cotizaciones","Diseños","Pagos","Personal"];
 
 function seedData(){
-  const users = [
-    {id:"u1", name:"Sebastián", role:"Administrador"},
-    {id:"u2", name:"Juan", role:"Ingeniero"},
-    {id:"u3", name:"Mateo", role:"Auxiliar"}
-  ];
-  const projects = [
-    {id:"p1", name:"Casa Retiro", status:"Activo", client:"Familia Retiro", location:"El Retiro, Ant.", start:"2026-05-15", due:"2026-12-20", stages:[
-      {id:"st1", name:"Cimentación", plannedStart:"2026-05-15", plannedEnd:"2026-06-15", currentStart:"2026-05-15", currentEnd:"2026-06-15", status:"terminada", notes:""},
-      {id:"st2", name:"Estructura", plannedStart:"2026-06-16", plannedEnd:"2026-08-30", currentStart:"2026-06-16", currentEnd:"2026-09-08", status:"ejecucion", notes:"Retraso por lluvias."},
-      {id:"st3", name:"Instalaciones", plannedStart:"2026-09-01", plannedEnd:"2026-09-30", currentStart:"2026-09-01", currentEnd:"2026-09-30", status:"pendiente", notes:""},
-      {id:"st4", name:"Acabados", plannedStart:"2026-10-01", plannedEnd:"2026-11-15", currentStart:"2026-10-01", currentEnd:"2026-11-15", status:"pendiente", notes:""},
-      {id:"st5", name:"Entrega", plannedStart:"2026-12-20", plannedEnd:"2026-12-20", currentStart:"2026-12-20", currentEnd:"2026-12-20", status:"pendiente", notes:""}
-    ], gantt:{
-      totalWeeks:14, monthWeeks:[4,4,4,2],
-      chapters:[
-        {name:"PRELIMINARES", activities:[
-          {name:"Actividades preliminares", segments:[{type:"ejecucion",start:1,end:1}]},
-          {name:"Detallado y aseo para entrega", segments:[{type:"ejecucion",start:14,end:14}]}
-        ]},
-        {name:"OBRA GRIS", activities:[
-          {name:"Muros nuevos en mampostería", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]},
-          {name:"Muros/rebancos en concreto", segments:[{type:"adjudicacion",start:1,end:2},{type:"ejecucion",start:3,end:5}]},
-          {name:"Revoque y resanes", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:5}]},
-          {name:"Impermeabilizaciones", segments:[{type:"adjudicacion",start:3,end:3},{type:"ejecucion",start:4,end:6}]}
-        ]},
-        {name:"REDES Y APARATOS", activities:[
-          {name:"Redes eléctricas, domótica, iluminación", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:6}]},
-          {name:"Redes hidrosanitarias y gas", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:5}]},
-          {name:"Aparatos hidrosanitarios y gas", segments:[{type:"ejecucion",start:8,end:11}]}
-        ]},
-        {name:"PISOS, ZÓCALOS Y ENCHAPES", activities:[
-          {name:"Pisos en piedra natural", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:6}]},
-          {name:"Enchapes en cerámica baños", segments:[{type:"adjudicacion",start:3,end:3},{type:"ejecucion",start:4,end:5}]},
-          {name:"Piso en madera estructurada", segments:[{type:"ejecucion",start:9,end:10}]}
-        ]},
-        {name:"MESONES Y LAVAMANOS EN PIEDRA", activities:[
-          {name:"Base y mesón en piedra para isla", segments:[{type:"adjudicacion",start:4,end:4},{type:"revisar",start:5,end:5}]},
-          {name:"Lavamanos en piedra para baños", segments:[{type:"adjudicacion",start:4,end:4},{type:"ejecucion",start:9,end:10}]}
-        ]},
-        {name:"CARPINTERÍA METÁLICA", activities:[
-          {name:"Vitralblock baño social", segments:[{type:"revisar",start:5,end:6}]},
-          {name:"Suministro e instalación de ventanería", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]}
-        ]},
-        {name:"INSTALACIONES ESPECIALES", activities:[
-          {name:"Instalación Jacuzzi", segments:[{type:"revisar",start:7,end:9}]},
-          {name:"Red aires acondicionados", segments:[{type:"adjudicacion",start:1,end:1},{type:"ejecucion",start:2,end:4}]},
-          {name:"Aparatos aires acondicionados", segments:[{type:"ejecucion",start:12,end:12}]}
-        ]}
-      ]
-    }},
-    {id:"p2", name:"Provenza", status:"Activo", client:"Inversiones Provenza", location:"Medellín", start:"2026-06-01", due:"2026-11-30", stages:[
-      {id:"st6", name:"Demolición y adecuación", plannedStart:"2026-06-01", plannedEnd:"2026-06-20", currentStart:"2026-06-01", currentEnd:"2026-06-20", status:"terminada", notes:""},
-      {id:"st7", name:"Obra civil", plannedStart:"2026-06-21", plannedEnd:"2026-09-30", currentStart:"2026-06-21", currentEnd:"2026-09-30", status:"ejecucion", notes:""},
-      {id:"st8", name:"Acabados y entrega", plannedStart:"2026-10-01", plannedEnd:"2026-11-30", currentStart:"2026-10-01", currentEnd:"2026-11-30", status:"pendiente", notes:""}
-    ]},
-    {id:"p3", name:"Edificio 34", status:"Activo", client:"Constructora 34", location:"Envigado", start:"2026-03-01", due:"2027-02-01", stages:[
-      {id:"st9", name:"Cimentación y estructura", plannedStart:"2026-03-01", plannedEnd:"2026-08-15", currentStart:"2026-03-01", currentEnd:"2026-08-15", status:"ejecucion", notes:""},
-      {id:"st10", name:"Instalaciones", plannedStart:"2026-08-16", plannedEnd:"2026-10-31", currentStart:"2026-08-16", currentEnd:"2026-10-31", status:"pendiente", notes:""},
-      {id:"st11", name:"Acabados", plannedStart:"2026-11-01", plannedEnd:"2027-01-15", currentStart:"2026-11-01", currentEnd:"2027-01-15", status:"pendiente", notes:""},
-      {id:"st12", name:"Entrega", plannedStart:"2027-02-01", plannedEnd:"2027-02-01", currentStart:"2027-02-01", currentEnd:"2027-02-01", status:"pendiente", notes:""}
-    ]}
-  ];
-  let n = 1;
-  const id = () => "t" + (n++);
-  const tasks = [
-    {id:id(), name:"Revisar planos", projectId:"p1", activity:"Diseños", responsible:"u1", priority:"Normal", week:"esta", deadline:null, completed:true, completedDate:TODAY, onHold:false, inMyDay:true, myDayDate:TODAY, description:""},
-    {id:id(), name:"Cotizar ventanería", projectId:"p2", activity:"Compras", responsible:"u2", priority:"Alta", week:"esta", deadline:"2026-08-28", completed:false, onHold:false, inMyDay:true, myDayDate:TODAY, description:""},
-    {id:id(), name:"Enviar presupuesto", projectId:"p1", activity:"Presupuestos", responsible:"u1", priority:"Alta", week:"esta", deadline:"2026-08-26", completed:false, onHold:false, inMyDay:true, myDayDate:TODAY, description:""},
-    {id:id(), name:"Comprar mercado", projectId:null, activity:"Personal", responsible:"u1", priority:"Baja", week:"esta", deadline:null, completed:false, onHold:false, inMyDay:true, myDayDate:TODAY, description:""},
-    {id:id(), name:"Revisar presupuesto eléctrico", projectId:"p2", activity:"Presupuestos", responsible:"u1", priority:"Alta", week:"esta", deadline:"2026-08-28", completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Cotizar acero", projectId:"p1", activity:"Compras", responsible:"u3", priority:"Normal", week:"esta", deadline:null, completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Enviar planos", projectId:"p3", activity:"Diseños", responsible:"u2", priority:"Normal", week:"esta", deadline:null, completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Revisar diseño iluminación", projectId:"p2", activity:"Diseños", responsible:"u3", priority:"Baja", week:null, deadline:null, completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Comprar acero", projectId:"p1", activity:"Compras", responsible:"u1", priority:"Normal", week:"esta", deadline:null, completed:false, onHold:true, holdReason:"Esperando planos estructurales del calculista.", holdWaiting:"Calculista", holdReview:"2026-08-28", inMyDay:false, description:""},
-    {id:id(), name:"Revisar fachada", projectId:"p2", activity:"Diseños", responsible:"u2", priority:"Normal", week:"esta", deadline:null, completed:false, onHold:true, holdReason:"Esperando aprobación del cliente.", holdWaiting:"Cliente", holdReview:"2026-08-25", inMyDay:false, description:""},
-    {id:id(), name:"Enviar propuesta", projectId:"p3", activity:"Presupuestos", responsible:"u1", priority:"Alta", week:"esta", deadline:"2026-08-26", completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Aprobar ventanería", projectId:"p2", activity:"Compras", responsible:"u2", priority:"Normal", week:"esta", deadline:"2026-08-28", completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Entrega proveedor", projectId:"p1", activity:"Compras", responsible:"u3", priority:"Normal", week:"proxima", deadline:"2026-08-31", completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Presupuesto acabados", projectId:"p3", activity:"Presupuestos", responsible:"u1", priority:"Baja", week:null, deadline:null, completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Cotización acero", projectId:"p2", activity:"Cotizaciones", responsible:"u3", priority:"Normal", week:"esta", deadline:null, completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Pagar anticipo proveedor", projectId:"p1", activity:"Pagos", responsible:"u1", priority:"Alta", week:"esta", deadline:"2026-08-20", completed:false, onHold:false, inMyDay:false, description:""},
-    {id:id(), name:"Presupuesto eléctrico edificio", projectId:"p3", activity:"Presupuestos", responsible:"u2", priority:"Normal", week:"proxima", deadline:null, completed:false, onHold:false, inMyDay:false, description:""}
-  ];
-  return {users, projects, tasks, nextTaskNum:n, currentUserId:"u1"};
+  return {
+    users: [
+      {id:"u1", name:"Pedro Mesa", role:""},
+      {id:"u2", name:"David Mesa", role:""},
+      {id:"u3", name:"Andres Felipe Acevedo", role:""}
+    ],
+    projects: [], tasks: [], activities: [], nextTaskNum: 1, currentUserId: null
+  };
 }
-
 /* ============ STATE ============ */
 let DATA = null;
 let excelImportProjectId = null;
+let LOCAL_USER = localStorage.getItem("obra:whoami") || null;
 const ui = {
   view: "home",
   projectId: null,
   projectTab: "resumen",
   activity: null,
   tasksFilter: "todas",
+  projectsFilter: "Activo",
   modal: null,
   fabOpen: false,
   selectedTaskIds: new Set()
 };
 
+const APP_PASSWORD = "maas32026";
 const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
   const SUPABASE_KEY = "sb_publishable_EQAsgRbjSmwf9NStpPckjw_viGo3I-u";
   const STORAGE = (typeof window !== "undefined" && window.storage) ? window.storage : {
@@ -519,6 +446,11 @@ function userName(uid){ const u = byId(DATA.users,uid); return u? u.name : "—"
 function projectName(pid){ if(!pid) return "Personal"; const p = byId(DATA.projects,pid); return p? p.name : "—"; }
 function taskById(tid){ return byId(DATA.tasks,tid); }
 const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function fmtLongDate(iso){
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  return `${DIAS[dt.getDay()]} ${d} de ${MESES[m-1]}, ${y}`;
+}
 function fmtDate(iso){
   if(!iso) return null;
   const [y,m,d] = iso.split("-").map(Number);
@@ -550,7 +482,7 @@ async function mutate(fn){
 function newTaskTemplate(overrides){
   return Object.assign({
     id: "t"+(DATA.nextTaskNum++),
-    name:"", projectId:null, activity:"Presupuestos", responsible: DATA.currentUserId,
+    name:"", projectId:null, activity:(DATA.activities&&DATA.activities[0])||"", responsible: LOCAL_USER,
     priority:"Normal", week:"esta", deadline:null,
     completed:false, onHold:false, inMyDay:false, description:""
   }, overrides||{});
@@ -568,6 +500,18 @@ function navItems(){
 }
 function render(){
   const app = document.getElementById("app");
+  if(localStorage.getItem("obra:unlocked") !== "1"){
+    app.innerHTML = `<div style="width:100%;min-height:100vh;">${renderLock()}</div>`;
+    document.getElementById("modal-root").innerHTML = "";
+    attachHandlers();
+    return;
+  }
+  if(!DATA.users.length || !LOCAL_USER || !byId(DATA.users, LOCAL_USER)){
+    app.innerHTML = `<div style="width:100%;min-height:100vh;overflow-y:auto;">${!DATA.users.length ? renderSetup() : renderWhoAmI()}</div>`;
+    document.getElementById("modal-root").innerHTML = "";
+    attachHandlers();
+    return;
+  }
   const items = navItems();
   const sidebar = `
     <aside class="sidebar">
@@ -581,7 +525,7 @@ function render(){
       <nav class="nav-links">
         ${items.map(i=>`<div class="nav-link ${ui.view===i.v?'active':''}" data-nav="${i.v}"><span class="ico">${i.ico}</span>${i.l}</div>`).join("")}
       </nav>
-      <div class="nav-foot mono">${userName(DATA.currentUserId)} · ${TODAY.split("-").reverse().join("/")}</div>
+      <div class="nav-foot mono">${userName(LOCAL_USER)} · ${TODAY.split("-").reverse().join("/")}</div>
     </aside>`;
   const topbar = `
     <div class="topbar">
@@ -617,6 +561,51 @@ function renderFabMenu(){
 }
 
 /* ============ RENDER: VIEWS ============ */
+function renderLock(){
+  return `
+  <div style="max-width:360px;margin:100px auto;padding:0 20px;text-align:center;">
+    <div class="display" style="font-weight:800;font-size:22px;letter-spacing:1px;color:var(--ink);">MAAS3</div>
+    <div class="mono" style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;margin-bottom:28px;">Bitácora de obra</div>
+    <div class="field" style="text-align:left;">
+      <label>Clave de acceso</label>
+      <input class="big" type="password" id="lock-pass" placeholder="••••••••" autofocus>
+    </div>
+    <div id="lock-error" style="color:var(--rust);font-size:12.5px;margin:-6px 0 12px 0;display:none;">Clave incorrecta.</div>
+    <button class="btn" data-lock-submit="1" style="width:100%;">Entrar</button>
+  </div>`;
+}
+function renderSetup(){
+  return `
+  <div style="max-width:480px;margin:60px auto;padding:0 20px;">
+    <div class="display" style="font-weight:800;font-size:22px;letter-spacing:1px;color:var(--ink);margin-bottom:4px;">MAAS3</div><div class="mono" style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;">Bitácora de obra</div>
+    <h1 class="page-title">Bienvenido a MAAS3 · Bitácora de obra</h1>
+    <div class="page-date mono" style="margin-bottom:24px;">Antes de empezar, arma tu equipo. Agrega a las personas que van a usar la app.</div>
+    ${DATA.users.length? `<section class="block">${DATA.users.map(u=>`
+      <div class="ticket" style="cursor:default;border-left-color:var(--lime);">
+        <div class="t-main"><div class="t-name">${esc(u.name)}</div><div class="t-meta">${esc(u.role||'')}</div></div>
+      </div>`).join("")}</section>` : ""}
+    <div class="field"><label>Nombre</label><input class="big" type="text" id="su-name" placeholder="Ej. Sebastián"></div>
+    <div class="field"><label>Rol (opcional)</label><input type="text" id="su-role" placeholder="Ej. Administrador, Ingeniero..."></div>
+    <button class="btn secondary" data-setup-add="1">+ Agregar al equipo</button>
+    ${DATA.users.length? `<div style="margin-top:24px;"><button class="btn" data-setup-continue="1">Continuar →</button></div>` : ""}
+  </div>`;
+}
+function renderWhoAmI(){
+  return `
+  <div style="max-width:420px;margin:60px auto;padding:0 20px;">
+    <div class="display" style="font-weight:800;font-size:22px;letter-spacing:1px;color:var(--ink);margin-bottom:4px;">MAAS3</div><div class="mono" style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;">Bitácora de obra</div>
+    <h1 class="page-title">¿Quién eres?</h1>
+    <div class="page-date mono" style="margin-bottom:24px;">Elige tu nombre para identificar tus tareas en este dispositivo</div>
+    ${DATA.users.map(u=>`
+      <div class="ticket" data-whoami-pick="${u.id}" style="cursor:pointer;">
+        <div class="t-main"><div class="t-name">${esc(u.name)}</div><div class="t-meta">${esc(u.role||'')}</div></div>
+        <div class="t-arrow">›</div>
+      </div>`).join("")}
+    <div style="margin-top:16px;">
+      <button class="btn ghost" data-whoami-new="1">+ Soy nuevo, agrégame al equipo</button>
+    </div>
+  </div>`;
+}
 function renderView(){
   if(ui.view==="home") return renderHome();
   if(ui.view==="myday") return renderMyDay();
@@ -664,8 +653,8 @@ function renderHome(){
   return `
     <div class="page-head">
       <div>
-        <h1 class="page-title">Buenos días, ${esc(userName(DATA.currentUserId))}</h1>
-        <div class="page-date mono">Lunes 24 de agosto, 2026</div>
+        <h1 class="page-title">Buenos días, ${esc(userName(LOCAL_USER))}</h1>
+        <div class="page-date mono">${fmtLongDate(TODAY)}</div>
       </div>
       <button class="btn" data-fab="newTask">+ Nueva tarea</button>
     </div>
@@ -724,7 +713,7 @@ function renderMyDay(){
     <div class="page-head">
       <div>
         <h1 class="page-title">Mi día</h1>
-        <div class="page-date mono">Lunes 24 de agosto</div>
+        <div class="page-date mono">${fmtLongDate(TODAY)}</div>
       </div>
     </div>
 
@@ -806,13 +795,21 @@ function renderMyTasks(){
 }
 
 function renderProjects(){
+  const filter = ui.projectsFilter || "Activo";
+  const chips = [
+    {v:"Activo", l:"Activos"},
+    {v:"Pausa", l:"En pausa"},
+    {v:"Finalizado", l:"Finalizados"}
+  ];
+  const shown = DATA.projects.filter(p=>(p.status||"Activo")===filter);
   return `
     <div class="page-head">
       <div><h1 class="page-title">Proyectos</h1></div>
       <button class="btn" data-fab="newProject">+ Nuevo proyecto</button>
     </div>
+    <div class="filters">${chips.map(c=>`<div class="chip ${filter===c.v?'active':''}" data-projects-filter="${c.v}">${c.l}</div>`).join("")}</div>
     <div class="proj-grid">
-      ${DATA.projects.map(p=>{
+      ${shown.map(p=>{
         const pt = activeTasks().filter(t=>t.projectId===p.id);
         const onhold = pt.filter(t=>t.onHold).length;
         return `
@@ -824,6 +821,7 @@ function renderProjects(){
           ${onhold? `<div class="proj-line warn"><b>${onhold}</b> en espera</div>`:""}
         </div>`;
       }).join("")}
+      ${!shown.length? `<div class="empty">No hay proyectos ${filter==='Activo'?'activos':filter==='Pausa'?'en pausa':'finalizados'}.</div>` : ""}
     </div>
   `;
 }
@@ -1073,6 +1071,11 @@ function renderProjectDetail(){
         <h1 class="page-title">${esc(p.name)}</h1>
         <div class="page-date mono">${esc(p.client)} · ${esc(p.location)} · entrega ${fmtDate(p.due)}</div>
       </div>
+      <select class="mini" data-change-project-status="${p.id}" style="height:fit-content;">
+        <option value="Activo" ${p.status==="Activo"?"selected":""}>Activo</option>
+        <option value="Pausa" ${p.status==="Pausa"?"selected":""}>En pausa</option>
+        <option value="Finalizado" ${p.status==="Finalizado"?"selected":""}>Finalizado</option>
+      </select>
     </div>
     <div class="tabs">
       ${tabs.map(t=>`<div class="tab-btn ${ui.projectTab===t.v?'active':''}" data-project-tab="${t.v}">${t.l}</div>`).join("")}
@@ -1083,14 +1086,18 @@ function renderProjectDetail(){
 
 function renderActivities(){
   const active = activeTasks();
+  const acts = DATA.activities || [];
   return `
-    <div class="page-head"><div><h1 class="page-title">Actividades</h1></div></div>
-    <div class="act-grid">
-      ${ACTIVITIES.map(a=>{
+    <div class="page-head">
+      <div><h1 class="page-title">Actividades</h1></div>
+      <button class="btn" data-add-activity="1">+ Nueva actividad</button>
+    </div>
+    ${acts.length? `<div class="act-grid">
+      ${acts.map(a=>{
         const c = active.filter(t=>t.activity===a).length;
         return `<div class="act-card" data-open-activity="${a}"><div class="num">${c}</div><div class="lbl">${a}</div></div>`;
       }).join("")}
-    </div>
+    </div>` : `<div class="empty">Todavía no hay actividades. Usa "+ Nueva actividad" para crear la primera (ej. Presupuestos, Compras, Diseños).</div>`}
   `;
 }
 
@@ -1125,7 +1132,8 @@ function fieldUserOptions(sel){
   return DATA.users.map(u=>`<option value="${u.id}" ${sel===u.id?'selected':''}>${esc(u.name)}</option>`).join("");
 }
 function fieldActivityOptions(sel){
-  return ACTIVITIES.map(a=>`<option value="${a}" ${sel===a?'selected':''}>${a}</option>`).join("");
+  const acts = DATA.activities || [];
+  return acts.map(a=>`<option value="${a}" ${sel===a?'selected':''}>${a}</option>`).join("") + `<option value="__new__">+ Nueva actividad…</option>`;
 }
 
 function renderModal(){
@@ -1178,7 +1186,7 @@ function renderModal(){
           <div class="field"><label>Categoría</label>
             <div class="quick-btns">
               <div class="chip selected" data-quick-cat="Personal">Personal</div>
-              <div class="chip" data-quick-cat="Presupuestos">Trabajo general</div>
+              <div class="chip" data-quick-cat="General">Trabajo general</div>
             </div>
           </div>
           <div class="field"><label>Fecha</label><input type="text" value="Hoy" disabled></div>
@@ -1364,6 +1372,68 @@ function attachHandlers(){
   const app = document.getElementById("app");
   const modalRoot = document.getElementById("modal-root");
 
+  // Access lock
+  const lockSubmit = app.querySelector("[data-lock-submit]");
+  if(lockSubmit){
+    const tryUnlock = ()=>{
+      const val = document.getElementById("lock-pass").value;
+      if(val === APP_PASSWORD){
+        localStorage.setItem("obra:unlocked", "1");
+        render();
+      } else {
+        const err = document.getElementById("lock-error");
+        if(err) err.style.display = "block";
+      }
+    };
+    lockSubmit.addEventListener("click", tryUnlock);
+    const passInput = document.getElementById("lock-pass");
+    if(passInput) passInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryUnlock(); });
+  }
+
+  // Team setup (first run)
+  const setupAdd = app.querySelector("[data-setup-add]");
+  if(setupAdd) setupAdd.addEventListener("click", ()=>{
+    const name = document.getElementById("su-name").value.trim();
+    if(!name){ document.getElementById("su-name").style.borderColor="var(--rust)"; return; }
+    const role = document.getElementById("su-role").value.trim();
+    mutate(()=>{
+      DATA.users.push({id:"u"+Date.now(), name, role});
+    });
+  });
+  const setupContinue = app.querySelector("[data-setup-continue]");
+  if(setupContinue) setupContinue.addEventListener("click", ()=>{ render(); });
+
+  // Who am I (per-device identity, not shared)
+  app.querySelectorAll("[data-whoami-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      LOCAL_USER = el.getAttribute("data-whoami-pick");
+      localStorage.setItem("obra:whoami", LOCAL_USER);
+      render();
+    });
+  });
+  const whoamiNew = app.querySelector("[data-whoami-new]");
+  if(whoamiNew) whoamiNew.addEventListener("click", ()=>{
+    const name = prompt("¿Cómo te llamas?");
+    if(!name || !name.trim()) return;
+    const role = prompt("¿Cuál es tu rol? (opcional)") || "";
+    const newId = "u"+Date.now();
+    mutate(()=>{ DATA.users.push({id:newId, name:name.trim(), role:role.trim()}); }).then(()=>{
+      LOCAL_USER = newId;
+      localStorage.setItem("obra:whoami", LOCAL_USER);
+      render();
+    });
+  });
+
+  // Add activity (from Actividades screen)
+  const addActivityBtn = app.querySelector("[data-add-activity]");
+  if(addActivityBtn) addActivityBtn.addEventListener("click", ()=>{
+    const name = prompt("Nombre de la nueva actividad (ej. Presupuestos, Compras, Diseños):");
+    if(!name || !name.trim()) return;
+    const clean = name.trim();
+    if(DATA.activities.includes(clean)){ alert("Esa actividad ya existe."); return; }
+    mutate(()=>{ DATA.activities.push(clean); });
+  });
+
   // Nav
   app.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -1401,6 +1471,15 @@ function attachHandlers(){
   });
   app.querySelectorAll("[data-project-tab]").forEach(el=>{
     el.addEventListener("click", ()=>{ ui.projectTab = el.getAttribute("data-project-tab"); render(); });
+  });
+  app.querySelectorAll("[data-projects-filter]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.projectsFilter = el.getAttribute("data-projects-filter"); render(); });
+  });
+  app.querySelectorAll("[data-change-project-status]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const pid = el.getAttribute("data-change-project-status");
+      mutate(()=>{ const proj = byId(DATA.projects, pid); if(proj) proj.status = el.value; });
+    });
   });
   app.querySelectorAll("[data-newtask-project]").forEach(el=>{
     el.addEventListener("click", ()=> openModal("newTask", {projectId: el.getAttribute("data-newtask-project")}));
@@ -1476,6 +1555,21 @@ function attachHandlers(){
   const overlay = document.getElementById("overlayEl");
   if(overlay) overlay.addEventListener("click", (e)=>{ if(e.target.id==="overlayEl") closeModal(); });
 
+  // Handle "+ Nueva actividad..." inline creation from the task form's activity select
+  const fActivitySel = document.getElementById("f-activity");
+  if(fActivitySel) fActivitySel.addEventListener("change", ()=>{
+    if(fActivitySel.value !== "__new__") return;
+    const name = prompt("Nombre de la nueva actividad:");
+    if(!name || !name.trim()){ fActivitySel.value = (DATA.activities&&DATA.activities[0])||"__new__"; return; }
+    const clean = name.trim();
+    mutate(()=>{ if(!DATA.activities.includes(clean)) DATA.activities.push(clean); }).then(()=>{
+      const reopenType = ui.modal && ui.modal.type;
+      const payload = ui.modal && ui.modal.payload;
+      if(reopenType){ openModal(reopenType, payload); }
+      setTimeout(()=>{ const s=document.getElementById("f-activity"); if(s) s.value=clean; }, 0);
+    });
+  });
+
   // Save task (new/edit)
   modalRoot.querySelectorAll("[data-save-task]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -1518,6 +1612,7 @@ function attachHandlers(){
     const name = document.getElementById("q-name").value.trim();
     if(!name) return;
     mutate(()=>{
+      if(!DATA.activities.includes(quickCat)) DATA.activities.push(quickCat);
       DATA.tasks.push(newTaskTemplate({name, activity: quickCat, projectId:null, inMyDay:true, myDayDate:TODAY, week:"esta"}));
     });
     closeModal();
