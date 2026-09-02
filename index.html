@@ -167,6 +167,7 @@
   .proj-status{position:absolute;top:14px;right:14px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;padding:2px 6px;border-radius:2px;background:var(--moss-soft);color:var(--moss);}
   .proj-status.Pausa{background:var(--amber-soft);color:var(--amber);}
   .proj-status.Finalizado{background:var(--line);color:var(--ink-soft);}
+  .proj-status.Pendiente{background:var(--blue-soft);color:var(--blue);}
   .proj-name{font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;margin-bottom:8px;padding-right:70px;}
   .proj-line{font-size:12px;color:var(--ink-soft);margin-bottom:3px;}
   .proj-line b{color:var(--ink);font-weight:600;}
@@ -358,7 +359,7 @@ function seedData(){
     users: [
       {id:"u1", name:"Pedro Mesa", role:""},
       {id:"u2", name:"David Mesa", role:""},
-      {id:"u3", name:"Andres Felipe Acevedo", role:""}
+      {id:"u3", name:"Andres Felipe Acebedo", role:""}
     ],
     projects: [], tasks: [], activities: [], nextTaskNum: 1, currentUserId: null
   };
@@ -433,6 +434,12 @@ const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
                                 if(!p.stages && sp.stages) p.stages = sp.stages;
                       }
               });
+              (DATA.users||[]).forEach(u=>{
+                    if(u.name === "Andres Felipe Acevedo") u.name = "Andres Felipe Acebedo";
+              });
+              (DATA.tasks||[]).forEach(t=>{
+                    if(t.repeat === undefined) t.repeat = "none";
+              });
         }catch(e){ console.error("Migration error:", e); }
     }
 }
@@ -461,6 +468,7 @@ function fmtDate(iso){
 function isPast(iso){ return iso && iso < TODAY; }
 function isOverdue(t){ return !t.completed && !t.onHold && t.deadline && isPast(t.deadline); }
 function activeTasks(){ return DATA.tasks.filter(t=>!t.completed); }
+function myActiveTasks(){ return DATA.tasks.filter(t=>!t.completed && t.responsible===LOCAL_USER); }
 function myDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed); }
 function myDayTasksToday(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate===TODAY); }
 function staleMyDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate && t.myDayDate!==TODAY); }
@@ -485,9 +493,37 @@ function newTaskTemplate(overrides){
   return Object.assign({
     id: "t"+(DATA.nextTaskNum++),
     name:"", projectId:null, activity:(DATA.activities&&DATA.activities[0])||"", responsible: LOCAL_USER,
-    priority:"Normal", week:"esta", deadline:null,
+    priority:"Normal", week:"esta", deadline:null, repeat:"none",
     completed:false, onHold:false, inMyDay:false, description:""
   }, overrides||{});
+}
+
+/* ============ RECURRING TASKS ============ */
+function addDaysISO(iso, days){
+  const d = new Date(iso+"T00:00:00");
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function addMonthISO(iso){
+  const d = new Date(iso+"T00:00:00");
+  d.setMonth(d.getMonth()+1);
+  return d.toISOString().slice(0,10);
+}
+function nextRecurrenceDeadline(deadline, repeat){
+  if(!deadline) return null;
+  if(repeat==="quincenal") return addDaysISO(deadline, 15);
+  if(repeat==="mensual") return addMonthISO(deadline);
+  return null;
+}
+function maybeSpawnRecurrence(task){
+  if(!task || !task.repeat || task.repeat==="none") return;
+  const nextDeadline = nextRecurrenceDeadline(task.deadline, task.repeat);
+  if(!nextDeadline) return;
+  DATA.tasks.push(newTaskTemplate({
+    name: task.name, projectId: task.projectId, activity: task.activity,
+    responsible: task.responsible, priority: task.priority, week: null,
+    deadline: nextDeadline, repeat: task.repeat, description: task.description||""
+  }));
 }
 
 /* ============ RENDER: SHELL ============ */
@@ -646,11 +682,11 @@ function taskTicket(t, opts){
 }
 
 function renderHome(){
-  const today = myDayTasksToday();
-  const esta = activeTasks().filter(t=>t.week==="esta" && !t.onHold);
-  const espera = activeTasks().filter(t=>t.onHold);
-  const vencidas = activeTasks().filter(isOverdue);
-  const proximos = activeTasks().filter(t=>t.deadline && !isPast(t.deadline)).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,5);
+  const today = myDayTasksToday().filter(t=>t.responsible===LOCAL_USER);
+  const esta = myActiveTasks().filter(t=>t.week==="esta" && !t.onHold);
+  const espera = myActiveTasks().filter(t=>t.onHold);
+  const vencidas = myActiveTasks().filter(isOverdue);
+  const proximos = myActiveTasks().filter(t=>t.deadline && !isPast(t.deadline)).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,5);
 
   return `
     <div class="page-head">
@@ -758,7 +794,7 @@ function renderMyTasks(){
     return `<section class="block"><div class="block-head"><div class="block-title">${title} <span class="count">· ${items.length}</span></div></div>${items.map(t=>taskTicket(t,{select:true})).join("")}</section>`;
   }
   let body = "";
-  const active = activeTasks();
+  const active = myActiveTasks();
   if(filter==="todas"){
     body = group(active.filter(t=>t.week==="esta"&&!t.onHold), "Esta semana")
       + group(active.filter(t=>t.week==="proxima"&&!t.onHold), "Próxima semana")
@@ -799,6 +835,7 @@ function renderMyTasks(){
 function renderProjects(){
   const filter = ui.projectsFilter || "Activo";
   const chips = [
+    {v:"Pendiente", l:"Pendientes"},
     {v:"Activo", l:"Activos"},
     {v:"Pausa", l:"En pausa"},
     {v:"Finalizado", l:"Finalizados"}
@@ -823,7 +860,7 @@ function renderProjects(){
           ${onhold? `<div class="proj-line warn"><b>${onhold}</b> en espera</div>`:""}
         </div>`;
       }).join("")}
-      ${!shown.length? `<div class="empty">No hay proyectos ${filter==='Activo'?'activos':filter==='Pausa'?'en pausa':'finalizados'}.</div>` : ""}
+      ${!shown.length? `<div class="empty">No hay proyectos ${filter==='Pendiente'?'pendientes':filter==='Activo'?'activos':filter==='Pausa'?'en pausa':'finalizados'}.</div>` : ""}
     </div>
   `;
 }
@@ -1073,11 +1110,15 @@ function renderProjectDetail(){
         <h1 class="page-title">${esc(p.name)}</h1>
         <div class="page-date mono">${esc(p.client)} · ${esc(p.location)} · entrega ${fmtDate(p.due)}</div>
       </div>
-      <select class="mini" data-change-project-status="${p.id}" style="height:fit-content;">
-        <option value="Activo" ${p.status==="Activo"?"selected":""}>Activo</option>
-        <option value="Pausa" ${p.status==="Pausa"?"selected":""}>En pausa</option>
-        <option value="Finalizado" ${p.status==="Finalizado"?"selected":""}>Finalizado</option>
-      </select>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <button class="btn ghost small" data-edit-project="${p.id}">✎ Editar</button>
+        <select class="mini" data-change-project-status="${p.id}" style="height:fit-content;">
+          <option value="Pendiente" ${p.status==="Pendiente"?"selected":""}>Pendiente</option>
+          <option value="Activo" ${p.status==="Activo"?"selected":""}>Activo</option>
+          <option value="Pausa" ${p.status==="Pausa"?"selected":""}>En pausa</option>
+          <option value="Finalizado" ${p.status==="Finalizado"?"selected":""}>Finalizado</option>
+        </select>
+      </div>
     </div>
     <div class="tabs">
       ${tabs.map(t=>`<div class="tab-btn ${ui.projectTab===t.v?'active':''}" data-project-tab="${t.v}">${t.l}</div>`).join("")}
@@ -1097,7 +1138,10 @@ function renderActivities(){
     ${acts.length? `<div class="act-grid">
       ${acts.map(a=>{
         const c = active.filter(t=>t.activity===a).length;
-        return `<div class="act-card" data-open-activity="${a}"><div class="num">${c}</div><div class="lbl">${a}</div></div>`;
+        return `<div class="act-card" data-open-activity="${a}" style="position:relative;">
+          <div class="num">${c}</div><div class="lbl">${a}</div>
+          <button class="btn ghost small" data-rename-activity="${esc(a)}" style="position:absolute;top:8px;right:8px;padding:2px 6px;" title="Renombrar">✎</button>
+        </div>`;
       }).join("")}
     </div>` : `<div class="empty">Todavía no hay actividades. Usa "+ Nueva actividad" para crear la primera (ej. Presupuestos, Compras, Diseños).</div>`}
   `;
@@ -1108,7 +1152,10 @@ function renderActivityDetail(){
   const items = activeTasks().filter(t=>t.activity===a);
   return `
     <div style="margin-bottom:8px;"><span class="chip" data-nav="activities" style="cursor:pointer;">← Actividades</span></div>
-    <h1 class="page-title" style="margin-bottom:16px;">${esc(a)}</h1>
+    <div class="page-head">
+      <h1 class="page-title" style="margin-bottom:0;">${esc(a)}</h1>
+      <button class="btn ghost small" data-rename-activity="${esc(a)}">✎ Renombrar</button>
+    </div>
     <table class="data">
       <thead><tr><th>Tarea</th><th>Proyecto</th><th>Responsable</th><th>Semana</th><th>Deadline</th></tr></thead>
       <tbody>
@@ -1165,6 +1212,14 @@ function renderModal(){
             <div class="field"><label>Semana objetivo</label><select id="f-week">${WEEKS.map(w=>`<option value="${w.v===null?'':w.v}" ${((t.week||"")===(w.v||""))?'selected':''}>${w.l}</option>`).join("")}</select></div>
             <div class="field"><label>Fecha límite</label><input type="date" id="f-deadline" value="${t.deadline||''}"></div>
           </div>
+          <div class="field">
+            <label>Repetir</label>
+            <select id="f-repeat">
+              <option value="none" ${(t.repeat||"none")==="none"?'selected':''}>No se repite</option>
+              <option value="quincenal" ${t.repeat==="quincenal"?'selected':''}>Cada 15 días</option>
+              <option value="mensual" ${t.repeat==="mensual"?'selected':''}>Cada mes</option>
+            </select>
+          </div>
           <details class="more"><summary>Más opciones</summary>
             <div class="field"><label>Descripción</label><textarea id="f-desc">${esc(t.description||"")}</textarea></div>
           </details>
@@ -1202,7 +1257,7 @@ function renderModal(){
   }
 
   else if(type==="fromMyTasks"){
-    const options = activeTasks().filter(t=>!t.inMyDay && !t.onHold);
+    const options = myActiveTasks().filter(t=>!t.inMyDay && !t.onHold);
     html = `
     <div class="overlay" id="overlayEl">
       <div class="modal">
@@ -1239,10 +1294,42 @@ function renderModal(){
             <div class="field"><label>Fecha inicio</label><input type="date" id="p-start" value="${TODAY}"></div>
             <div class="field"><label>Entrega estimada</label><input type="date" id="p-due"></div>
           </div>
+          <div class="field">
+            <label>Estado inicial</label>
+            <select id="p-status">
+              <option value="Pendiente">Pendiente (cotización, aún no confirmado)</option>
+              <option value="Activo" selected>Activo</option>
+            </select>
+          </div>
         </div>
         <div class="modal-foot">
           <button class="btn ghost" data-close>Cancelar</button>
           <button class="btn" data-save-project="1">Crear proyecto</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  else if(type==="editProject"){
+    const ep = byId(DATA.projects, payload.projectId);
+    html = `
+    <div class="overlay" id="overlayEl">
+      <div class="modal">
+        <div class="modal-head"><div class="modal-title">Editar proyecto</div><button class="modal-close" data-close>✕</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Nombre</label><input class="big" type="text" id="ep-name" value="${esc(ep.name||'')}" placeholder="Nombre del proyecto"></div>
+          <div class="field-row">
+            <div class="field"><label>Cliente</label><input type="text" id="ep-client" value="${esc(ep.client||'')}"></div>
+            <div class="field"><label>Ubicación</label><input type="text" id="ep-location" value="${esc(ep.location||'')}"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Fecha inicio</label><input type="date" id="ep-start" value="${ep.start||''}"></div>
+            <div class="field"><label>Entrega estimada</label><input type="date" id="ep-due" value="${ep.due||''}"></div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" data-close>Cancelar</button>
+          <button class="btn" data-save-edit-project="${ep.id}">Guardar cambios</button>
         </div>
       </div>
     </div>`;
@@ -1343,6 +1430,7 @@ function renderModal(){
             <div class="detail-row"><span class="k">Estado</span><span class="v">${t.completed?'Completada':(t.onHold?'En espera':'Pendiente')}</span></div>
             <div class="detail-row"><span class="k">Semana objetivo</span><span class="v">${t.week==="esta"?"Esta semana":t.week==="proxima"?"Próxima semana":"Sin programar"}</span></div>
             <div class="detail-row"><span class="k">Fecha límite</span><span class="v">${t.deadline? fmtDate(t.deadline) : "—"}</span></div>
+            ${t.repeat && t.repeat!=="none"? `<div class="detail-row"><span class="k">Repite</span><span class="v">${t.repeat==="quincenal"?"Cada 15 días":"Cada mes"}</span></div>` : ""}
           </div>
           ${t.onHold? `
           <div class="hold-box">
@@ -1436,6 +1524,25 @@ function attachHandlers(){
     mutate(()=>{ DATA.activities.push(clean); });
   });
 
+  // Rename an existing activity (updates the activity list and every task using it)
+  app.querySelectorAll("[data-rename-activity]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const oldName = el.getAttribute("data-rename-activity");
+      const name = prompt("Nuevo nombre para la actividad:", oldName);
+      if(!name || !name.trim()) return;
+      const clean = name.trim();
+      if(clean === oldName) return;
+      if(DATA.activities.includes(clean)){ alert("Ya existe una actividad con ese nombre."); return; }
+      mutate(()=>{
+        const idx = DATA.activities.indexOf(oldName);
+        if(idx !== -1) DATA.activities[idx] = clean;
+        DATA.tasks.forEach(t=>{ if(t.activity === oldName) t.activity = clean; });
+        if(ui.activity === oldName) ui.activity = clean;
+      });
+    });
+  });
+
   // Nav
   app.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -1483,6 +1590,9 @@ function attachHandlers(){
       mutate(()=>{ const proj = byId(DATA.projects, pid); if(proj) proj.status = el.value; });
     });
   });
+  app.querySelectorAll("[data-edit-project]").forEach(el=>{
+    el.addEventListener("click", ()=> openModal("editProject", {projectId: el.getAttribute("data-edit-project")}));
+  });
   app.querySelectorAll("[data-newtask-project]").forEach(el=>{
     el.addEventListener("click", ()=> openModal("newTask", {projectId: el.getAttribute("data-newtask-project")}));
   });
@@ -1507,7 +1617,7 @@ function attachHandlers(){
     el.addEventListener("click", (e)=>{
       e.stopPropagation();
       const id = el.getAttribute("data-toggle-complete");
-      mutate(()=>{ const t=taskById(id); t.completed=!t.completed; t.completedDate = t.completed? TODAY : null; });
+      mutate(()=>{ const t=taskById(id); t.completed=!t.completed; t.completedDate = t.completed? TODAY : null; if(t.completed) maybeSpawnRecurrence(t); });
     });
   });
 
@@ -1546,7 +1656,7 @@ function attachHandlers(){
       mutate(()=>{
         const t = taskById(id);
         if(action==="today"){ t.myDayDate = TODAY; }
-        else if(action==="done"){ t.completed=true; t.completedDate=TODAY; }
+        else if(action==="done"){ t.completed=true; t.completedDate=TODAY; maybeSpawnRecurrence(t); }
         else if(action==="return"){ t.inMyDay=false; }
       });
     });
@@ -1586,6 +1696,7 @@ function attachHandlers(){
         priority: document.getElementById("f-priority").value,
         week: document.getElementById("f-week").value || null,
         deadline: document.getElementById("f-deadline").value || null,
+        repeat: document.getElementById("f-repeat") ? document.getElementById("f-repeat").value : "none",
         description: document.getElementById("f-desc").value
       };
       if(mode==="edit"){
@@ -1636,12 +1747,31 @@ function attachHandlers(){
     mutate(()=>{
       DATA.projects.push({
         id: "p"+(DATA.projects.length+1)+"_"+Date.now(),
-        name, status:"Activo",
+        name, status: (document.getElementById("p-status") ? document.getElementById("p-status").value : "Activo"),
         client: document.getElementById("p-client").value,
         location: document.getElementById("p-location").value,
         start: document.getElementById("p-start").value || TODAY,
         due: document.getElementById("p-due").value || null
       });
+    });
+    closeModal();
+  });
+
+  // save edited project
+  const saveEditProject = modalRoot.querySelector("[data-save-edit-project]");
+  if(saveEditProject) saveEditProject.addEventListener("click", ()=>{
+    const pid = saveEditProject.getAttribute("data-save-edit-project");
+    const name = document.getElementById("ep-name").value.trim();
+    if(!name){ document.getElementById("ep-name").style.borderColor="var(--rust)"; return; }
+    mutate(()=>{
+      const proj = byId(DATA.projects, pid);
+      if(proj){
+        proj.name = name;
+        proj.client = document.getElementById("ep-client").value;
+        proj.location = document.getElementById("ep-location").value;
+        proj.start = document.getElementById("ep-start").value || proj.start;
+        proj.due = document.getElementById("ep-due").value || null;
+      }
     });
     closeModal();
   });
@@ -1713,7 +1843,7 @@ function attachHandlers(){
   const dComplete = q("[data-detail-complete]");
   if(dComplete) dComplete.addEventListener("click", ()=>{
     const id = dComplete.getAttribute("data-detail-complete");
-    mutate(()=>{ const t=taskById(id); t.completed=true; t.completedDate=TODAY; });
+    mutate(()=>{ const t=taskById(id); t.completed=true; t.completedDate=TODAY; maybeSpawnRecurrence(t); });
     openModal("taskDetail", {taskId:id});
   });
   const dReopen = q("[data-detail-reopen]");
