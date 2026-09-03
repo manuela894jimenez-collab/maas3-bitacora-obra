@@ -564,7 +564,10 @@ function render(){
       <nav class="nav-links">
         ${items.map(i=>`<div class="nav-link ${ui.view===i.v?'active':''}" data-nav="${i.v}"><span class="ico">${i.ico}</span>${i.l}</div>`).join("")}
       </nav>
-      <div class="nav-foot mono">${userName(LOCAL_USER)} · ${TODAY.split("-").reverse().join("/")}</div>
+      <div class="nav-foot mono">
+        ${userName(LOCAL_USER)} · ${TODAY.split("-").reverse().join("/")}
+        <div style="margin-top:6px;"><span data-switch-profile="1" style="cursor:pointer;text-decoration:underline;">Cambiar de perfil</span></div>
+      </div>
     </aside>`;
   const topbar = `
     <div class="topbar">
@@ -572,6 +575,7 @@ function render(){
     </div>
     <div class="topbar-nav">
       ${items.map(i=>`<div class="nav-link ${ui.view===i.v?'active':''}" data-nav="${i.v}"><span class="ico">${i.ico}</span>${i.l}</div>`).join("")}
+      <div class="nav-link" data-switch-profile="1"><span class="ico">⇄</span>Perfil</div>
     </div>`;
 
   app.innerHTML = `
@@ -1512,6 +1516,15 @@ function attachHandlers(){
     mutate(()=>{ DATA.users.push({id:newId, name:name.trim(), role:role.trim()}); }).then(()=>{
       LOCAL_USER = newId;
       localStorage.setItem("obra:whoami", LOCAL_USER);
+      render();
+    });
+  });
+
+  // Switch profile (keeps the access password unlocked, just re-asks "¿Quién eres?")
+  app.querySelectorAll("[data-switch-profile]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      LOCAL_USER = null;
+      localStorage.removeItem("obra:whoami");
       render();
     });
   });
