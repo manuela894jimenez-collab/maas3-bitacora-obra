@@ -469,9 +469,10 @@ function isPast(iso){ return iso && iso < TODAY; }
 function isOverdue(t){ return !t.completed && !t.onHold && t.deadline && isPast(t.deadline); }
 function activeTasks(){ return DATA.tasks.filter(t=>!t.completed); }
 function myActiveTasks(){ return DATA.tasks.filter(t=>!t.completed && t.responsible===LOCAL_USER); }
-function myDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed); }
-function myDayTasksToday(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate===TODAY); }
-function staleMyDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate && t.myDayDate!==TODAY); }
+function myDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.responsible===LOCAL_USER); }
+function myDayTasksToday(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate===TODAY && t.responsible===LOCAL_USER); }
+function myDayAllToday(){ return DATA.tasks.filter(t=>t.inMyDay && t.myDayDate===TODAY && t.responsible===LOCAL_USER); }
+function staleMyDayTasks(){ return DATA.tasks.filter(t=>t.inMyDay && !t.completed && t.myDayDate && t.myDayDate!==TODAY && t.responsible===LOCAL_USER); }
 function esc(s){ return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 function setView(view, extra){
@@ -677,6 +678,7 @@ function taskTicket(t, opts){
         ${t.deadline?`<span class="stamp ${overdue?'due':''}" style="${overdue?'':'background:var(--line);color:var(--ink-soft);'}">${overdue?'Vencida ':'Vence '}${fmtDate(t.deadline)}</span>`:""}
       </div>
     </div>
+    ${opts.trash ? `<button class="btn ghost small" data-delete-task-quick="${t.id}" title="Eliminar tarea" style="padding:5px 8px;flex-shrink:0;" onclick="event.stopPropagation()">🗑</button>` : ""}
     <div class="t-arrow">›</div>
   </div>`;
 }
@@ -742,10 +744,10 @@ function renderHome(){
 
 function renderMyDay(){
   const stale = staleMyDayTasks();
-  const list = myDayTasksToday();
-  const listAll = list.concat(myDayTasks().filter(t=>t.myDayDate!==TODAY));
-  const completedToday = DATA.tasks.filter(t=>t.completed && t.inMyDay && t.myDayDate===TODAY).length;
-  const totalToday = list.length + completedToday;
+  const todayAll = myDayAllToday();
+  const listAll = todayAll.concat(myDayTasks().filter(t=>t.myDayDate!==TODAY));
+  const completedToday = todayAll.filter(t=>t.completed).length;
+  const totalToday = todayAll.length;
 
   return `
     <div class="page-head">
@@ -772,7 +774,7 @@ function renderMyDay(){
     <div style="font-size:13px;font-weight:600;color:var(--ink-soft);">${completedToday} de ${totalToday||0} completadas</div>
     <div class="progress-wrap"><div class="progress-fill" style="width:${totalToday? (completedToday/totalToday*100):0}%"></div></div>
 
-    ${listAll.length? listAll.map(t=>taskTicket(t)).join("") : `<div class="empty">Aún no hay tareas en tu día. Añade algunas abajo.</div>`}
+    ${listAll.length? listAll.map(t=>taskTicket(t,{trash:true})).join("") : `<div class="empty">Aún no hay tareas en tu día. Añade algunas abajo.</div>`}
 
     <div style="margin-top:16px;display:flex;gap:8px;">
       <button class="btn" data-fab="fromMyTasks">+ Añadir a Mi día</button>
@@ -1568,7 +1570,7 @@ function attachHandlers(){
   // Open task / project / activity
   app.querySelectorAll("[data-open-task]").forEach(el=>{
     el.addEventListener("click", (e)=>{
-      if(e.target.closest("[data-toggle-complete]") || e.target.closest("[data-select-task]")) return;
+      if(e.target.closest("[data-toggle-complete]") || e.target.closest("[data-select-task]") || e.target.closest("[data-delete-task-quick]")) return;
       openModal("taskDetail", {taskId: el.getAttribute("data-open-task")});
     });
   });
@@ -1618,6 +1620,18 @@ function attachHandlers(){
       e.stopPropagation();
       const id = el.getAttribute("data-toggle-complete");
       mutate(()=>{ const t=taskById(id); t.completed=!t.completed; t.completedDate = t.completed? TODAY : null; if(t.completed) maybeSpawnRecurrence(t); });
+    });
+  });
+
+  // quick delete (trash icon) on a task ticket
+  app.querySelectorAll("[data-delete-task-quick]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute("data-delete-task-quick");
+      const t = taskById(id);
+      if(t && confirm(`¿Eliminar "${t.name}"? Esta acción no se puede deshacer.`)){
+        mutate(()=>{ DATA.tasks = DATA.tasks.filter(x=>x.id!==id); });
+      }
     });
   });
 
