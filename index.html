@@ -401,14 +401,12 @@ const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
       },
       async set(key, value){
             localStorage.setItem("obra:"+key, value);
-            try{
-                    const res = await fetch(SUPABASE_URL+"/rest/v1/app_storage", {
-                              method:"POST",
-                              headers:{ apikey: SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
-                              body: JSON.stringify([{key, value}])
-                    });
-                    if(!res.ok) throw new Error("http "+res.status);
-            }catch(e){ console.error("Supabase set failed (saved locally only):", e); }
+            const res = await fetch(SUPABASE_URL+"/rest/v1/app_storage", {
+                      method:"POST",
+                      headers:{ apikey: SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
+                      body: JSON.stringify([{key, value}])
+            });
+            if(!res.ok) throw new Error("http "+res.status);
             return {key, value};
       }
   };
@@ -443,10 +441,27 @@ const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
         }catch(e){ console.error("Migration error:", e); }
     }
 }
+let SAVE_STATUS = "saved"; // "saved" | "saving" | "error"
 async function saveData(){
   try{
         await STORAGE.set("obra-data", JSON.stringify(DATA));
-  }catch(e){ console.error("Error guardando", e); }
+        SAVE_STATUS = "saved";
+  }catch(e){ console.error("Error guardando", e); SAVE_STATUS = "error"; }
+}
+async function manualSave(){
+  SAVE_STATUS = "saving";
+  render();
+  await saveData();
+  render();
+}
+function saveStatusBadge(){
+  if(SAVE_STATUS==="saving"){
+    return `<div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:6px;">⏳ Guardando…</div>`;
+  }
+  if(SAVE_STATUS==="error"){
+    return `<div data-manual-save="1" class="mono" style="font-size:11px;color:var(--rust);margin-top:6px;cursor:pointer;text-decoration:underline;font-weight:700;">⚠ No se guardó — toca para reintentar</div>`;
+  }
+  return `<div class="mono" style="font-size:11px;color:var(--moss);margin-top:6px;">✓ Guardado</div>`;
 }
 
 /* ============ HELPERS ============ */
@@ -485,6 +500,8 @@ function closeModal(){ ui.modal = null; render(); }
 
 async function mutate(fn){
   fn();
+  SAVE_STATUS = "saving";
+  render();
   await saveData();
   render();
 }
@@ -567,6 +584,7 @@ function render(){
       <div class="nav-foot mono">
         ${userName(LOCAL_USER)} · ${TODAY.split("-").reverse().join("/")}
         <div style="margin-top:6px;"><span data-switch-profile="1" style="cursor:pointer;text-decoration:underline;">Cambiar de perfil</span></div>
+        ${saveStatusBadge()}
       </div>
     </aside>`;
   const topbar = `
@@ -576,6 +594,7 @@ function render(){
     <div class="topbar-nav">
       ${items.map(i=>`<div class="nav-link ${ui.view===i.v?'active':''}" data-nav="${i.v}"><span class="ico">${i.ico}</span>${i.l}</div>`).join("")}
       <div class="nav-link" data-switch-profile="1"><span class="ico">⇄</span>Perfil</div>
+      <div class="nav-link" style="cursor:default;">${saveStatusBadge()}</div>
     </div>`;
 
   app.innerHTML = `
@@ -1529,6 +1548,11 @@ function attachHandlers(){
     });
   });
 
+  // Manual save retry (shown when the last save failed)
+  app.querySelectorAll("[data-manual-save]").forEach(el=>{
+    el.addEventListener("click", ()=> manualSave());
+  });
+
   // Add activity (from Actividades screen)
   const addActivityBtn = app.querySelector("[data-add-activity]");
   if(addActivityBtn) addActivityBtn.addEventListener("click", ()=>{
@@ -1921,6 +1945,12 @@ function attachHandlers(){
 }
 
 /* ============ INIT ============ */
+window.addEventListener("beforeunload", (e)=>{
+  if(SAVE_STATUS === "saving" || SAVE_STATUS === "error"){
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
 (async function init(){
   document.getElementById("app").innerHTML = `<div style="padding:60px;font-family:'IBM Plex Mono',monospace;color:#4A5568;">Cargando bitácora…</div>`;
   await loadData();
