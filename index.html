@@ -529,6 +529,7 @@ function addMonthISO(iso){
 }
 function nextRecurrenceDeadline(deadline, repeat){
   if(!deadline) return null;
+  if(repeat==="semanal") return addDaysISO(deadline, 7);
   if(repeat==="quincenal") return addDaysISO(deadline, 15);
   if(repeat==="mensual") return addMonthISO(deadline);
   return null;
@@ -1241,6 +1242,7 @@ function renderModal(){
             <label>Repetir</label>
             <select id="f-repeat">
               <option value="none" ${(t.repeat||"none")==="none"?'selected':''}>No se repite</option>
+              <option value="semanal" ${t.repeat==="semanal"?'selected':''}>Cada semana</option>
               <option value="quincenal" ${t.repeat==="quincenal"?'selected':''}>Cada 15 días</option>
               <option value="mensual" ${t.repeat==="mensual"?'selected':''}>Cada mes</option>
             </select>
@@ -1455,7 +1457,7 @@ function renderModal(){
             <div class="detail-row"><span class="k">Estado</span><span class="v">${t.completed?'Completada':(t.onHold?'En espera':'Pendiente')}</span></div>
             <div class="detail-row"><span class="k">Semana objetivo</span><span class="v">${t.week==="esta"?"Esta semana":t.week==="proxima"?"Próxima semana":"Sin programar"}</span></div>
             <div class="detail-row"><span class="k">Fecha límite</span><span class="v">${t.deadline? fmtDate(t.deadline) : "—"}</span></div>
-            ${t.repeat && t.repeat!=="none"? `<div class="detail-row"><span class="k">Repite</span><span class="v">${t.repeat==="quincenal"?"Cada 15 días":"Cada mes"}</span></div>` : ""}
+            ${t.repeat && t.repeat!=="none"? `<div class="detail-row"><span class="k">Repite</span><span class="v">${t.repeat==="semanal"?"Cada semana":t.repeat==="quincenal"?"Cada 15 días":"Cada mes"}</span></div>` : ""}
           </div>
           ${t.onHold? `
           <div class="hold-box">
