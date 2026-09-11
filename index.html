@@ -391,13 +391,14 @@ const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
                     });
                     if(!res.ok) throw new Error("http "+res.status);
                     const rows = await res.json();
-                    if(!rows || !rows.length) return null;
-                    return { key, value: rows[0].value };
+                    if(rows && rows.length) return { key, value: rows[0].value };
+                    // Supabase answered but with zero rows — don't trust that as "truly empty",
+                    // fall through to the local cache below just like a network failure would.
             }catch(e){
                     console.error("Supabase get failed, using local copy:", e);
-                    const v = localStorage.getItem("obra:"+key);
-                    return v===null ? null : {key, value:v};
             }
+            const v = localStorage.getItem("obra:"+key);
+            return v===null ? null : {key, value:v};
       },
       async set(key, value){
             localStorage.setItem("obra:"+key, value);
@@ -411,17 +412,19 @@ const SUPABASE_URL = "https://kjabcznxjmarqygeleov.supabase.co";
       }
   };
   async function loadData(){
+  // IMPORTANT: this function only ever READS. It must never call saveData(),
+  // because a transient read (stale local cache, brief network hiccup, etc.)
+  // could otherwise silently overwrite everyone else's data in Supabase.
+  // Writing only happens from real user actions, via mutate().
   try{
           const res = await STORAGE.get("obra-data");
     if(res && res.value){
       DATA = JSON.parse(res.value);
             migrateData();
-            await saveData();
             return;
     }
   }catch(e){ /* not found */ }
   DATA = seedData();
-  await saveData();
     function migrateData(){
         try{
               const seed = seedData();
