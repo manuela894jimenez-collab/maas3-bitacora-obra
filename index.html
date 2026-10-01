@@ -458,13 +458,18 @@ async function manualSave(){
   render();
 }
 function saveStatusBadge(){
+  let statusHtml;
   if(SAVE_STATUS==="saving"){
-    return `<div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:6px;">⏳ Guardando…</div>`;
+    statusHtml = `<span class="mono" style="font-size:11px;color:var(--ink-soft);">⏳ Guardando…</span>`;
+  } else if(SAVE_STATUS==="error"){
+    statusHtml = `<span class="mono" style="font-size:11px;color:var(--rust);font-weight:700;">⚠ No se guardó</span>`;
+  } else {
+    statusHtml = `<span class="mono" style="font-size:11px;color:var(--moss);">✓ Guardado</span>`;
   }
-  if(SAVE_STATUS==="error"){
-    return `<div data-manual-save="1" class="mono" style="font-size:11px;color:var(--rust);margin-top:6px;cursor:pointer;text-decoration:underline;font-weight:700;">⚠ No se guardó — toca para reintentar</div>`;
-  }
-  return `<div class="mono" style="font-size:11px;color:var(--moss);margin-top:6px;">✓ Guardado</div>`;
+  return `<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <button type="button" data-manual-save="1" class="mono" style="font-size:11px;font-weight:700;background:var(--lime);color:#1a1a1a;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;">💾 Guardar</button>
+    ${statusHtml}
+  </div>`;
 }
 
 /* ============ HELPERS ============ */
