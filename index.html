@@ -492,7 +492,7 @@ function mergeData(local, base, remote){
   return m;
 }
 async function fetchRemote(){
-  const res = await fetch(SB_URL+"?key=eq.obra-data&select=value,updated_at&_="+Date.now(), { headers: SB_HEADERS, cache:"no-store" });
+  const res = await fetch(SB_URL+"?key=eq.obra-data&select=value,updated_at", { headers: SB_HEADERS, cache:"no-store" });
   if(!res.ok) throw new Error("http "+res.status);
   const rows = await res.json();
   if(!rows || !rows.length) return null;
@@ -510,18 +510,20 @@ async function doSave(){
       const merged = remote ? mergeData(snap, BASE || remote.data, remote.data) : cloneJSON(snap);
       const body = JSON.stringify(merged);
       let ok = false;
+      const newTs = new Date().toISOString();
       if(!remote){
         const r = await fetch(SB_URL, { method:"POST", headers:Object.assign({"Content-Type":"application/json", Prefer:"resolution=merge-duplicates"}, SB_HEADERS), body: JSON.stringify([{key:"obra-data", value: body}]) });
         if(!r.ok) throw new Error("http "+r.status);
         ok = true;
       } else {
-        const r = await fetch(SB_URL+"?key=eq.obra-data&updated_at=eq."+encodeURIComponent(remote.updated_at), { method:"PATCH", headers:Object.assign({"Content-Type":"application/json", Prefer:"return=representation"}, SB_HEADERS), body: JSON.stringify({ value: body, updated_at: new Date().toISOString() }) });
+        const r = await fetch(SB_URL+"?key=eq.obra-data&updated_at=eq."+encodeURIComponent(remote.updated_at), { method:"PATCH", headers:Object.assign({"Content-Type":"application/json", Prefer:"return=representation"}, SB_HEADERS), body: JSON.stringify({ value: body, updated_at: newTs }) });
         if(!r.ok) throw new Error("http "+r.status);
         const rows = await r.json();
         ok = !!(rows && rows.length); // 0 rows = another device saved in between -> retry
       }
       if(ok){
         BASE = cloneJSON(merged);
+        LAST_UPDATED = newTs;
         DATA = mergeData(DATA, snap, merged); // keeps anything typed while saving, brings in other devices' changes
         try{ localStorage.setItem("obra:obra-data", JSON.stringify(DATA)); }catch(e){}
         SAVE_STATUS = "saved";
@@ -532,12 +534,18 @@ async function doSave(){
   }catch(e){ console.error("Error guardando", e); SAVE_STATUS = "error"; }
 }
 let REFRESHING = false;
+let LAST_UPDATED = null; // updated_at of the cloud copy we last saw/wrote
 async function refreshFromCloud(){
   if(REFRESHING || SAVE_STATUS==="saving" || !LOCAL_USER) return;
   REFRESHING = true;
   try{
+    if(LAST_UPDATED){ // cheap check first: only a few bytes, download everything only if something changed
+      const lr = await fetch(SB_URL+"?key=eq.obra-data&select=updated_at", { headers: SB_HEADERS, cache:"no-store" });
+      if(lr.ok){ const lrows = await lr.json(); if(lrows.length && lrows[0].updated_at===LAST_UPDATED) return; }
+    }
     const remote = await fetchRemote();
     if(!remote) return;
+    LAST_UPDATED = remote.updated_at;
     if(BASE && sameJSON(BASE, remote.data)) return; // nothing new
     if(SAVE_STATUS==="saving") return;
     DATA = BASE ? mergeData(DATA, BASE, remote.data) : cloneJSON(remote.data);
@@ -2066,7 +2074,7 @@ window.addEventListener("beforeunload", (e)=>{
   window.addEventListener("focus", refreshFromCloud);
   window.addEventListener("pageshow", refreshFromCloud);
   window.addEventListener("online", refreshFromCloud);
-  setInterval(()=>{ if(document.visibilityState==="visible") refreshFromCloud(); }, 20000);
+  setInterval(()=>{ if(document.visibilityState==="visible") refreshFromCloud(); }, 30000);
 })();
 </script>
 </body>
